@@ -45,5 +45,3 @@ const WalletConnect: React.FC = () => {
     </div>
   );
 };
-
-export default WalletConnect;
