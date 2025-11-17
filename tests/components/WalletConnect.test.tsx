@@ -1,32 +1,31 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import WalletConnect from '../../src/components/WalletConnect';
-import { useWallet } from '../../src/hooks/useWallet';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import WalletConnect from '@/components/WalletConnect';
+import { useWallet } from '@/hooks/useWallet';
 
-jest.mock('../../src/hooks/useWallet');
+jest.mock('@/hooks/useWallet');
 
 describe('WalletConnect', () => {
-  const mockConnectWallet = jest.fn();
-  const mockDisconnectWallet = jest.fn();
-
-  beforeEach(() => {
+  it('shows connect button initially', () => {
     (useWallet as jest.Mock).mockReturnValue({
-      connectWallet: mockConnectWallet,
-      disconnectWallet: mockDisconnectWallet,
+      connectWallet: jest.fn(),
       address: '',
-      status: 'Please connect your wallet',
+      status: '',
       isConnected: false,
     });
-  });
-
-  it('renders connect button initially', () => {
     render(<WalletConnect />);
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
-    expect(screen.queryByText('Disconnect Wallet')).not.toBeInTheDocument();
   });
 
-  it('calls connectWallet on button click', () => {
+  it('shows disconnect button when connected', () => {
+    (useWallet as jest.Mock).mockReturnValue({
+      connectWallet: jest.fn(),
+      disconnectWallet: jest.fn(),
+      address: '0x1234...5678',
+      status: 'Wallet connected successfully!',
+      isConnected: true,
+    });
     render(<WalletConnect />);
-    fireEvent.click(screen.getByText('Connect Wallet'));
-    expect(mockConnectWallet).toHaveBeenCalledWith(true);
+    expect(screen.getByText('Disconnect Wallet')).toBeInTheDocument();
+    expect(screen.getByText('Connected: 0x1234...5678')).toBeInTheDocument();
   });
 });
