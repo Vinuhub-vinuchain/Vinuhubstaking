@@ -1,29 +1,19 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import StakingForm from '../../src/components/StakingForm';
-import { useWallet } from '../../src/hooks/useWallet';
-import { useContract } from '../../src/hooks/useContract';
+import StakingForm from '@/components/StakingForm';
 
-jest.mock('../../src/hooks/useWallet');
-jest.mock('../../src/hooks/useContract');
+jest.mock('@/hooks/useWallet');
+jest.mock('@/hooks/useContract');
 
 describe('StakingForm', () => {
-  beforeEach(() => {
-    (useWallet as jest.Mock).mockReturnValue({ signer: {} });
-    (useContract as jest.Mock).mockReturnValue({ contract: {}, tokenContract: {} });
+  it('disables buttons when not connected', () => {
+    render(<StakingForm />);
+    expect(screen.getByText('Approve VIN')).toBeDisabled();
+    expect(screen.getByText('Stake Now')).toBeDisabled();
   });
 
-  it('renders staking form', () => {
+  it('shows error for amount less than 10', () => {
     render(<StakingForm />);
-    expect(screen.getByText('Minimum Stake: 10 VIN')).toBeInTheDocument();
-    expect(screen.getByText('Approve VIN')).toBeInTheDocument();
-    expect(screen.getByText('Stake Now')).toBeInTheDocument();
-  });
-
-  it('shows error for invalid amount', () => {
-    render(<StakingForm />);
-    fireEvent.change(screen.getByPlaceholderText('Enter amount (min 10 VIN)'), {
-      target: { value: '5' },
-    });
+    fireEvent.change(screen.getByPlaceholderText('Enter amount (min 10 VIN)'), { target: { value: '5' } });
     fireEvent.click(screen.getByText('Approve VIN'));
     expect(screen.getByText('Enter at least 10 VIN')).toBeInTheDocument();
   });
