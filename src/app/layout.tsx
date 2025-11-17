@@ -3,7 +3,10 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'VinuHub Staking',
-  description: 'Stake VIN tokens on VinuChain and earn rewards',
+  description: 'Official VIN staking platform on VinuChain',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-black text-white min-h-screen">{children}</body>
     </html>
   )
 }
