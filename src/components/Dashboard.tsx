@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useWallet } from '../hooks/useWallet';
-import { useContract } from '../hooks/useContract';
+"use client";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { useWallet } from "../hooks/useWallet";
+import { useContract } from "../hooks/useContract";
 
 const Dashboard: React.FC = () => {
   const { address } = useWallet();
   const { contract } = useContract();
-  const [stakeInfo, setStakeInfo] = useState({ amount: '0', lockTime: '0', rewards: '0' });
-  const [error, setError] = useState('');
+  const [stakeInfo, setStakeInfo] = useState({ amount: "0", lockTime: "0", rewards: "0" });
+  const [error, setError] = useState("");
   const [loadingUnstake, setLoadingUnstake] = useState(false);
   const [loadingEmergency, setLoadingEmergency] = useState(false);
 
@@ -16,13 +17,13 @@ const Dashboard: React.FC = () => {
     try {
       const [amount, lockTimeLeft, rewards] = await contract.getStakeInfo(address);
       setStakeInfo({
-        amount: ethers.utils.formatUnits(amount, 18),
+        amount: ethers.formatUnits(amount, 18),
         lockTime: Math.ceil(Number(lockTimeLeft) / 86400).toString(),
-        rewards: ethers.utils.formatUnits(rewards, 18),
+        rewards: ethers.formatUnits(rewards, 18),
       });
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Dashboard error:', err);
+      console.error("Dashboard error:", err);
     }
   };
 
@@ -31,11 +32,11 @@ const Dashboard: React.FC = () => {
       setLoadingUnstake(true);
       const tx = await contract?.unstake();
       await tx?.wait();
-      setError('Unstaked successfully!');
+      setError("Unstaked successfully!");
       updateDashboard();
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Unstake error:', err);
+      console.error("Unstake error:", err);
     } finally {
       setLoadingUnstake(false);
     }
@@ -46,11 +47,11 @@ const Dashboard: React.FC = () => {
       setLoadingEmergency(true);
       const tx = await contract?.emergencyUnstake();
       await tx?.wait();
-      setError('Emergency unstaked (10% fee applied)!');
+      setError("Emergency unstaked (10% fee applied)!");
       updateDashboard();
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Emergency unstake error:', err);
+      console.error("Emergency unstake error:", err);
     } finally {
       setLoadingEmergency(false);
     }
@@ -81,10 +82,7 @@ const Dashboard: React.FC = () => {
         >
           Unstake {loadingUnstake && <span className="spinner" />}
         </button>
-        <button
-          onClick={handleEmergencyUnstake}
-          disabled={!contract || Number(stakeInfo.amount) === 0}
-        >
+        <button onClick={handleEmergencyUnstake} disabled={!contract || Number(stakeInfo.amount) === 0}>
           Emergency Unstake (10% Fee) {loadingEmergency && <span className="spinner" />}
         </button>
       </div>
@@ -92,3 +90,5 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
+
+export default Dashboard;

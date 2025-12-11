@@ -1,29 +1,30 @@
-import { useState } from 'react';
-import { ethers } from 'ethers';
-import { useWallet } from '../hooks/useWallet';
-import { useContract } from '../hooks/useContract';
+"use client";
+import { useState } from "react";
+import { ethers } from "ethers";
+import { useWallet } from "../hooks/useWallet";
+import { useContract } from "../hooks/useContract";
 
 const StakingForm: React.FC = () => {
   const { signer } = useWallet();
   const { contract, tokenContract } = useContract();
-  const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
   const [loadingApprove, setLoadingApprove] = useState(false);
   const [loadingStake, setLoadingStake] = useState(false);
 
   const handleApprove = async () => {
     if (!amount || Number(amount) < 10) {
-      setError('Enter at least 10 VIN');
+      setError("Enter at least 10 VIN");
       return;
     }
     try {
       setLoadingApprove(true);
-      const tx = await tokenContract?.approve(contract?.address, ethers.utils.parseUnits(amount, 18));
+      const tx = await tokenContract?.approve(contract?.address, ethers.parseUnits(amount, 18));
       await tx?.wait();
-      setError('Approved! Now stake.');
+      setError("Approved! Now stake.");
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Approve error:', err);
+      console.error("Approve error:", err);
     } finally {
       setLoadingApprove(false);
     }
@@ -32,13 +33,13 @@ const StakingForm: React.FC = () => {
   const handleStake = async () => {
     try {
       setLoadingStake(true);
-      const tx = await contract?.stake(ethers.utils.parseUnits(amount, 18));
+      const tx = await contract?.stake(ethers.parseUnits(amount, 18));
       await tx?.wait();
-      setError('Staked successfully!');
-      setAmount('');
+      setError("Staked successfully!");
+      setAmount("");
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Stake error:', err);
+      console.error("Stake error:", err);
     } finally {
       setLoadingStake(false);
     }
@@ -66,3 +67,5 @@ const StakingForm: React.FC = () => {
     </div>
   );
 };
+
+export default StakingForm;

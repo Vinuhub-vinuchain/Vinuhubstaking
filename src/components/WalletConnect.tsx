@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useWallet } from '../hooks/useWallet';
+"use client";
+import { useState, useEffect } from "react";
+import { useWallet } from "../hooks/useWallet";
 
 const WalletConnect: React.FC = () => {
   const { connectWallet, disconnectWallet, address, status, isConnected } = useWallet();
@@ -24,7 +25,7 @@ const WalletConnect: React.FC = () => {
       <button
         id="connectWallet"
         onClick={handleConnect}
-        style={{ display: isConnected ? 'none' : 'inline-block' }}
+        style={{ display: isConnected ? "none" : "inline-block" }}
         disabled={loading}
       >
         Connect Wallet {loading && <span className="spinner" />}
@@ -32,16 +33,21 @@ const WalletConnect: React.FC = () => {
       <button
         id="disconnectWallet"
         onClick={handleDisconnect}
-        style={{ display: isConnected ? 'inline-block' : 'none' }}
+        style={{ display: isConnected ? "inline-block" : "none" }}
       >
         Disconnect Wallet
       </button>
       {address && (
         <p id="wallet-address">
-          Connected: <strong>{address.slice(0, 6)}...{address.slice(-4)}</strong>
+          Connected:{" "}
+          <strong>
+            {address.slice(0, 6)}...{address.slice(-4)}
+          </strong>
         </p>
       )}
       <div id="status">{status}</div>
     </div>
   );
 };
+
+export default WalletConnect;

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useContract } from '../hooks/useContract';
+"use client";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { useContract } from "../hooks/useContract";
 
 const Leaderboard: React.FC = () => {
   const { contract } = useContract();
   const [leaderboard, setLeaderboard] = useState<{ user: string; amount: string }[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const updateLeaderboard = async () => {
     if (!contract) return;
@@ -13,12 +14,12 @@ const Leaderboard: React.FC = () => {
       const [users, amounts] = await contract.getLeaderboard();
       const formatted = users.map((user: string, i: number) => ({
         user: `${user.slice(0, 6)}...${user.slice(-4)}`,
-        amount: ethers.utils.formatUnits(amounts[i], 18),
+        amount: ethers.formatUnits(amounts[i], 18),
       }));
       setLeaderboard(formatted);
     } catch (err: any) {
       setError(`Error: ${err.message}`);
-      console.error('Leaderboard error:', err);
+      console.error("Leaderboard error:", err);
     }
   };
 
@@ -45,3 +46,5 @@ const Leaderboard: React.FC = () => {
     </div>
   );
 };
+
+export default Leaderboard;
