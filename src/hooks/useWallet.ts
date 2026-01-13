@@ -1,6 +1,7 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { ethers, BrowserProvider } from "ethers";
+import { ethers } from "ethers";
 import { WalletState } from "../types";
 
 declare global {
@@ -12,8 +13,6 @@ declare global {
 const vinuChain = {
   chainId: "0xCF",
   chainName: "VinuChain",
-
-  System: "VinuChain",
   rpcUrls: ["https://rpc.vinuchain.org", "https://vinuchain-rpc.com"],
   nativeCurrency: { name: "VC", symbol: "VC", decimals: 18 },
   blockExplorerUrls: ["https://vinuexplorer.org"],
@@ -28,38 +27,51 @@ export const useWallet = () => {
     isConnected: false,
   });
 
-  const connectWallet = async (manual: boolean) => {
+  const connectWallet = async (manual = false) => {
+    if (typeof window === "undefined") return; // Skip on server
+
     try {
       if (!window.ethereum || !window.ethereum.isMetaMask) {
-        throw new Error("MetaMask not detected. Install MetaMask from metamask.io.");
+        throw new Error("MetaMask not detected. Install from metamask.io");
       }
-      setWalletState((prev) => ({ ...prev, status: manual ? "Requesting connection..." : "Auto-detecting wallet..." }));
 
+      setWalletState((prev) => ({
+        ...prev,
+        status: manual ? "Requesting connection..." : "Auto-detecting wallet...",
+      }));
+
+      // Use BrowserProvider (ethers v6)
       const provider = new ethers.BrowserProvider(window.ethereum);
-      let accounts: string[];
+
+      let accounts: string[] = [];
+
       if (manual) {
-        console.log("Requesting accounts manually...");
-        accounts = await provider.send("eth_requestAccounts", []);
+        console.log("Manual connect: requesting accounts...");
+        accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
       } else {
-        console.log("Checking existing accounts...");
-        accounts = await provider.send("eth_accounts", []);
+        console.log("Auto-detect: checking accounts...");
+        accounts = await window.ethereum.request({ method: "eth_accounts" });
       }
 
       if (accounts.length === 0 && !manual) {
-        console.log("No accounts found");
+        console.log("No accounts found yet");
         setWalletState((prev) => ({ ...prev, status: "Please connect your wallet" }));
         return;
       }
 
       console.log("Accounts:", accounts);
+
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
+      // Check/switch chain
       const network = await provider.getNetwork();
-      console.log("Current chain ID:", network.chainId);
-      if (network.chainId !== 207n) {
+      console.log("Detected chain ID:", Number(network.chainId));
+
+      if (Number(network.chainId) !== 207) {
         setWalletState((prev) => ({ ...prev, status: "Switching to VinuChain..." }));
-        console.log("Attempting to switch to VinuChain...");
+        console.log("Switching chain...");
+
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
@@ -67,7 +79,7 @@ export const useWallet = () => {
           });
         } catch (switchError: any) {
           if (switchError.code === 4902) {
-            console.log("VinuChain not found, adding...");
+            console.log("Adding VinuChain...");
             await window.ethereum.request({
               method: "wallet_addEthereumChain",
               params: [vinuChain],
@@ -85,20 +97,21 @@ export const useWallet = () => {
         status: "Wallet connected successfully!",
         isConnected: true,
       });
-      console.log("Connection successful");
+
+      console.log("Wallet fully connected!");
     } catch (error: any) {
-      console.error("Connect error:", error);
-      let userMessage = "Connection failed: ";
-      if (error.code === 4001 || error.message.includes("User rejected")) {
-        userMessage += "You rejected the request in MetaMask.";
-      } else if (error.message.includes("MetaMask not detected")) {
-        userMessage += "Install MetaMask from metamask.io.";
-      } else if (error.message.includes("network")) {
-        userMessage += "Network issue. Add VinuChain manually: Chain ID 207, RPC https://rpc.vinuchain.org.";
-      } else {
-        userMessage += error.message;
-      }
-      setWalletState((prev) => ({ ...prev, status: userMessage, isConnected: false }));
+      console.error("Wallet connection failed:", error);
+      let msg = "Connection failed: ";
+      if (error.code === 4001) msg += "You rejected in MetaMask.";
+      else if (error.code === -32002) msg += "MetaMask is already processing a request — check your wallet.";
+      else if (error.message.includes("User rejected")) msg += "You rejected the request.";
+      else msg += error.message || "Unknown error";
+
+      setWalletState((prev) => ({
+        ...prev,
+        status: msg,
+        isConnected: false,
+      }));
     }
   };
 
@@ -114,27 +127,36 @@ export const useWallet = () => {
   };
 
   useEffect(() => {
-    window.ethereum?.on("accountsChanged", (accounts: string[]) => {
+    if (typeof window === "undefined") return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
       console.log("Accounts changed:", accounts);
       if (accounts.length === 0) {
         disconnectWallet();
       } else {
         connectWallet(false);
       }
-    });
+    };
 
-    window.ethereum?.on("chainChanged", (chainId: string) => {
-      console.log("Chain changed:", chainId);
+    const handleChainChanged = (chainId: string) => {
+      console.log("Chain changed to:", chainId);
       if (parseInt(chainId, 16) !== 207) {
         disconnectWallet();
         setWalletState((prev) => ({ ...prev, status: "Please switch to VinuChain" }));
       } else {
         connectWallet(false);
       }
-    });
+    };
+
+    window.ethereum?.on("accountsChanged", handleAccountsChanged);
+    window.ethereum?.on("chainChanged", handleChainChanged);
+
+    // Initial auto-connect
+    connectWallet(false);
 
     return () => {
-      window.ethereum?.removeAllListeners();
+      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum?.removeListener("chainChanged", handleChainChanged);
     };
   }, []);
 
