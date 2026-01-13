@@ -1,3 +1,4 @@
+// src/hooks/useWallet.ts
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,7 +38,7 @@ export const useWallet = () => {
   }, []);
 
   const connectWallet = async (manual = false) => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return; // Skip on server
 
     try {
       if (!window.ethereum || !window.ethereum.isMetaMask) {
@@ -49,13 +50,14 @@ export const useWallet = () => {
         status: manual ? "Requesting connection..." : "Auto-detecting wallet...",
       }));
 
+      // Use BrowserProvider (ethers v6)
       const provider = new ethers.BrowserProvider(window.ethereum);
 
       let accounts: string[] = [];
 
-      // Add timeout to prevent infinite hang on mobile
+      // Add longer timeout for mobile (30s)
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Connection timeout - check MetaMask app")), 15000)
+        setTimeout(() => reject(new Error("Connection timeout - check MetaMask app or try manual connect")), isMobile ? 30000 : 15000)
       );
 
       if (manual || isMobile) {
@@ -69,7 +71,11 @@ export const useWallet = () => {
         accounts = await window.ethereum.request({ method: "eth_accounts" });
       }
 
-      if (accounts.length === 0 && !manual) {
+      if (accounts.length === 0 && manual && isMobile) {
+        throw new Error("Mobile connect failed. Open MetaMask app, switch to browser tab, and try again.");
+      }
+
+      if (accounts.length === 0) {
         console.log("No accounts found");
         setWalletState((prev) => ({ ...prev, status: "Please connect your wallet" }));
         return;
@@ -126,11 +132,13 @@ export const useWallet = () => {
       console.error("Wallet connection failed:", error);
       let msg = "Connection failed: ";
       if (error.message.includes("timeout")) {
-        msg += "Connection timed out. Open MetaMask app and try again.";
+        msg += "Connection timed out. On mobile? Open MetaMask app, then return to browser and try manual connect.";
       } else if (error.code === 4001) {
         msg += "You rejected the request in MetaMask.";
       } else if (error.code === -32002) {
         msg += "MetaMask is busy — check your wallet and try again.";
+      } else if (isMobile) {
+        msg += "Mobile issue. Close browser, open MetaMask app, then try again.";
       } else {
         msg += error.message || "Unknown error";
       }
