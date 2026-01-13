@@ -27,8 +27,17 @@ export const useWallet = () => {
     isConnected: false,
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile
+    const mobileCheck = /Mobi|Android/i.test(navigator.userAgent);
+    setIsMobile(mobileCheck);
+    console.log("Device is mobile:", mobileCheck);
+  }, []);
+
   const connectWallet = async (manual = false) => {
-    if (typeof window === "undefined") return; // Skip on server
+    if (typeof window === "undefined") return;
 
     try {
       if (!window.ethereum || !window.ethereum.isMetaMask) {
@@ -40,32 +49,43 @@ export const useWallet = () => {
         status: manual ? "Requesting connection..." : "Auto-detecting wallet...",
       }));
 
-      // Use BrowserProvider (ethers v6)
       const provider = new ethers.BrowserProvider(window.ethereum);
 
       let accounts: string[] = [];
 
-      if (manual) {
-        console.log("Manual connect: requesting accounts...");
-        accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      // Add timeout to prevent infinite hang on mobile
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Connection timeout - check MetaMask app")), 15000)
+      );
+
+      if (manual || isMobile) {
+        console.log("Manual/mobile connect: requesting accounts...");
+        accounts = await Promise.race([
+          window.ethereum.request({ method: "eth_requestAccounts" }),
+          timeoutPromise,
+        ]) as string[];
       } else {
-        console.log("Auto-detect: checking accounts...");
+        console.log("Desktop auto-detect: checking accounts...");
         accounts = await window.ethereum.request({ method: "eth_accounts" });
       }
 
       if (accounts.length === 0 && !manual) {
-        console.log("No accounts found yet");
+        console.log("No accounts found");
         setWalletState((prev) => ({ ...prev, status: "Please connect your wallet" }));
         return;
       }
 
-      console.log("Accounts:", accounts);
+      console.log("Accounts received:", accounts);
 
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
-      // Check/switch chain
-      const network = await provider.getNetwork();
+      // Chain check & switch with timeout
+      const network = await Promise.race([
+        provider.getNetwork(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Network timeout")), 10000)),
+      ]) as ethers.Network;
+
       console.log("Detected chain ID:", Number(network.chainId));
 
       if (Number(network.chainId) !== 207) {
@@ -73,10 +93,13 @@ export const useWallet = () => {
         console.log("Switching chain...");
 
         try {
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0xCF" }],
-          });
+          await Promise.race([
+            window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0xCF" }],
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Switch timeout")), 10000)),
+          ]);
         } catch (switchError: any) {
           if (switchError.code === 4902) {
             console.log("Adding VinuChain...");
@@ -102,10 +125,15 @@ export const useWallet = () => {
     } catch (error: any) {
       console.error("Wallet connection failed:", error);
       let msg = "Connection failed: ";
-      if (error.code === 4001) msg += "You rejected in MetaMask.";
-      else if (error.code === -32002) msg += "MetaMask is already processing a request — check your wallet.";
-      else if (error.message.includes("User rejected")) msg += "You rejected the request.";
-      else msg += error.message || "Unknown error";
+      if (error.message.includes("timeout")) {
+        msg += "Connection timed out. Open MetaMask app and try again.";
+      } else if (error.code === 4001) {
+        msg += "You rejected the request in MetaMask.";
+      } else if (error.code === -32002) {
+        msg += "MetaMask is busy — check your wallet and try again.";
+      } else {
+        msg += error.message || "Unknown error";
+      }
 
       setWalletState((prev) => ({
         ...prev,
