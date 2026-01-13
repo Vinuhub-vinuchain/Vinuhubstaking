@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 export interface WalletState {
-  provider: ethers.providers.Web3Provider | null;
+  provider: ethers.BrowserProvider | null;
   signer: ethers.Signer | null;
   address: string;
   status: string;
