@@ -35,7 +35,7 @@ export const useWallet = () => {
       }
       setWalletState((prev) => ({ ...prev, status: manual ? "Requesting connection..." : "Auto-detecting wallet..." }));
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       let accounts: string[];
       if (manual) {
         console.log("Requesting accounts manually...");
