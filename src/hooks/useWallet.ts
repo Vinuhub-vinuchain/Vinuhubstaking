@@ -1,4 +1,3 @@
-// src/hooks/useWallet.ts
 "use client";
 
 import { useState, useEffect } from "react";
