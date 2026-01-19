@@ -9,3 +9,4 @@ A decentralized staking platform for VIN tokens on VinuChain, built with Next.js
 - Unstake or emergency unstake (10% fee).
 - Leaderboard of top stakers.
 - Responsive UI with animations (cubic-bezier, radial gradient buttons).
+ 
